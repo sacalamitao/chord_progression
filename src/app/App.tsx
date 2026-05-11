@@ -2,17 +2,19 @@ import { useState } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { EventsPage } from '../features/events/pages/events-page'
+import { HomePage } from '../features/home/pages/home-page'
 import { KeysPage } from '../features/keys/pages/keys-page'
 import { SongsPage } from '../features/songs/pages/songs-page'
 import { BottomNavigation, type BottomNavigationTab } from '../shared/components/bottom-navigation'
 import { colors } from '../shared/theme/colors'
 
 export function RootApp() {
-  const [activeTab, setActiveTab] = useState<BottomNavigationTab>('events')
+  const [activeTab, setActiveTab] = useState<BottomNavigationTab>('home')
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.screen}>
+      {activeTab === 'home' ? <HomePage /> : null}
       {activeTab === 'keys' ? <KeysPage /> : null}
       {activeTab === 'songs' ? <SongsPage /> : null}
       {activeTab === 'events' ? <EventsPage /> : null}

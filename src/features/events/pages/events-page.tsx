@@ -6,6 +6,7 @@ import { EventCard, type EventCardViewModel } from '../components/event-card'
 import { EventsFilterTabs, type EventsFilter } from '../components/events-filter-tabs'
 import { EventsHeader } from '../components/events-header'
 import { EventsSearchBar } from '../components/events-search-bar'
+import { EventDetailPage } from './event-detail-page'
 import { useCreateEventModal } from '../hooks/use-create-event-modal'
 import { useEvents } from '../hooks/use-events'
 import type { Event } from '../types'
@@ -63,6 +64,7 @@ export function EventsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<EventsFilter>('all')
   const [activeActionsEventId, setActiveActionsEventId] = useState<string | null>(null)
+  const [openedEventId, setOpenedEventId] = useState<string | null>(null)
   const createEventModal = useCreateEventModal({
     createEvent,
     updateEvent,
@@ -131,6 +133,12 @@ export function EventsPage() {
   const capitalized = (str: string) =>
     str.charAt(0).toUpperCase() + str.slice(1)
 
+  const openedEvent = openedEventId ? eventsById.get(openedEventId) ?? null : null
+
+  if (openedEvent) {
+    return <EventDetailPage eventId={openedEvent.id} eventName={openedEvent.name} onBack={() => setOpenedEventId(null)} />
+  }
+
   return (
     <View style={styles.screen}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -154,6 +162,7 @@ export function EventsPage() {
             <EventCard
               key={item.id}
               event={item}
+              onPress={() => setOpenedEventId(item.id)}
               actionsVisible={activeActionsEventId === item.id}
               onToggleActions={() => setActiveActionsEventId((currentId) => (currentId === item.id ? null : item.id))}
               onCloseActions={() => setActiveActionsEventId(null)}

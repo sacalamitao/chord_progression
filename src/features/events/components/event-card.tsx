@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native'
 import { colors } from '../../../shared/theme/colors'
 
 export type EventCardViewModel = {
@@ -13,6 +13,7 @@ export type EventCardViewModel = {
 
 type EventCardProps = {
   event: EventCardViewModel
+  onPress?: () => void
   actionsVisible: boolean
   onToggleActions: () => void
   onCloseActions: () => void
@@ -20,12 +21,13 @@ type EventCardProps = {
   onDelete: () => void
 }
 
-export function EventCard({ event, actionsVisible, onToggleActions, onCloseActions, onEdit, onDelete }: EventCardProps) {
+export function EventCard({ event, onPress, actionsVisible, onToggleActions, onCloseActions, onEdit, onDelete }: EventCardProps) {
   const [dateDay, dateNumber = ''] = event.dateLabel.split(' ')
+  const stopPropagation = (event: GestureResponderEvent) => event.stopPropagation()
 
   return (
-    <View style={styles.card}>
-      <View style={[styles.cardHeader, { backgroundColor: event.accentColor }]}>
+    <Pressable style={styles.card} onPress={onPress}>
+      <View style={[styles.cardHeader, { backgroundColor: event.accentColor }]}> 
         <View style={styles.dateBadge}>
           <Text style={styles.dateBadgeDay}>{dateDay}</Text>
           <Text style={styles.dateBadgeNumber}>{dateNumber.replace(',', '') || '—'}</Text>
@@ -39,20 +41,51 @@ export function EventCard({ event, actionsVisible, onToggleActions, onCloseActio
         {event.manageable ? (
           <View style={styles.actionsWrap}>
             {actionsVisible ? (
-              <Pressable accessibilityRole="button" accessibilityLabel="Close event actions menu" style={styles.actionsBackdrop} onPress={onCloseActions} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close event actions menu"
+                style={styles.actionsBackdrop}
+                onPress={(event) => {
+                  stopPropagation(event)
+                  onCloseActions()
+                }}
+              />
             ) : null}
 
-            <Pressable accessibilityRole="button" accessibilityLabel={`Open actions for ${event.title}`} hitSlop={10} style={styles.moreButton} onPress={onToggleActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Open actions for ${event.title}`}
+              hitSlop={10}
+              style={styles.moreButton}
+              onPress={(event) => {
+                stopPropagation(event)
+                onToggleActions()
+              }}
+            >
               <Text style={styles.moreIcon}>⋯</Text>
             </Pressable>
 
             {actionsVisible ? (
               <View style={styles.actionsMenu}>
-                <Pressable accessibilityRole="button" style={styles.actionItem} onPress={onEdit}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.actionItem}
+                  onPress={(event) => {
+                    stopPropagation(event)
+                    onEdit()
+                  }}
+                >
                   <Text style={styles.actionText}>Edit</Text>
                 </Pressable>
                 <View style={styles.actionDivider} />
-                <Pressable accessibilityRole="button" style={styles.actionItem} onPress={onDelete}>
+                <Pressable
+                  accessibilityRole="button"
+                  style={styles.actionItem}
+                  onPress={(event) => {
+                    stopPropagation(event)
+                    onDelete()
+                  }}
+                >
                   <Text style={styles.deleteActionText}>Delete</Text>
                 </Pressable>
               </View>
@@ -75,7 +108,7 @@ export function EventCard({ event, actionsVisible, onToggleActions, onCloseActio
           </View>
         </View>
       </View>
-    </View>
+    </Pressable>
   )
 }
 

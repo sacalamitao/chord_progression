@@ -94,6 +94,24 @@ export function CreateEventModal({ visible, mode, values, datePickerVisible, sub
             <Text style={styles.helperText}>Optional. The selected date is saved to the backend schedule.</Text>
           </View>
 
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Image URL</Text>
+            <TextInput
+              accessibilityLabel="Event image URL"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!submitting}
+              keyboardType="url"
+              onChangeText={(value) => onChangeField('imageUrl', value)}
+              placeholder="https://example.com/event-banner.jpg"
+              placeholderTextColor={colors.textMuted}
+              returnKeyType="done"
+              style={styles.input}
+              value={values.imageUrl}
+            />
+            <Text style={styles.helperText}>Optional. Add a public image URL for Home hero card display.</Text>
+          </View>
+
           {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
 
           <View style={styles.actionsRow}>
@@ -115,23 +133,23 @@ const styles = StyleSheet.create({
   card: { borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.surface, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 34, shadowColor: colors.shadow, shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.28, shadowRadius: 24, elevation: 8 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 },
   eyebrow: { color: colors.textSecondary, fontSize: 13, fontWeight: '800', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.8 },
-  title: { color: colors.textPrimary, fontSize: 28, fontWeight: '900', letterSpacing: -0.8 },
+  title: { color: colors.textPrimary, fontFamily: 'Inter_800ExtraBold', fontSize: 28, letterSpacing: -0.8 },
   closeButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   closeButtonText: { color: colors.textPrimary, fontSize: 28, lineHeight: 30, fontWeight: '300' },
   formGroup: { marginBottom: 16 },
-  label: { color: colors.textPrimary, fontSize: 14, fontWeight: '800', marginBottom: 8 },
-  input: { minHeight: 52, borderRadius: 18, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, color: colors.textPrimary, fontSize: 16, fontWeight: '700', paddingHorizontal: 16, paddingVertical: 14 },
+  label: { color: colors.textPrimary, fontFamily: 'Inter_700Bold', fontSize: 14, marginBottom: 8 },
+  input: { minHeight: 52, borderRadius: 18, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, color: colors.textPrimary, fontFamily: 'Inter_600SemiBold', fontSize: 16, paddingHorizontal: 16, paddingVertical: 14 },
   dateButton: { minHeight: 58, borderRadius: 18, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12 },
-  dateButtonText: { color: colors.textPrimary, fontSize: 16, fontWeight: '800' },
+  dateButtonText: { color: colors.textPrimary, fontFamily: 'Inter_700Bold', fontSize: 16 },
   dateButtonPlaceholder: { color: colors.textMuted },
-  dateButtonHint: { color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginTop: 3 },
+  dateButtonHint: { color: colors.textSecondary, fontFamily: 'Inter_600SemiBold', fontSize: 12, marginTop: 3 },
   dateIcon: { color: colors.textSecondary, fontSize: 18, fontWeight: '800' },
-  helperText: { color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 8 },
-  errorText: { color: colors.danger, fontSize: 13, fontWeight: '700', marginTop: 2, marginBottom: 14 },
+  helperText: { color: colors.textSecondary, fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17, marginTop: 8 },
+  errorText: { color: colors.danger, fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 2, marginBottom: 14 },
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 6 },
   secondaryButton: { flex: 1, minHeight: 52, borderRadius: 18, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  secondaryButtonText: { color: colors.textPrimary, fontSize: 15, fontWeight: '900' },
+  secondaryButtonText: { color: colors.textPrimary, fontFamily: 'Inter_700Bold', fontSize: 15 },
   primaryButton: { flex: 1, minHeight: 52, borderRadius: 18, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
-  primaryButtonText: { color: colors.textPrimary, fontSize: 15, fontWeight: '900' },
+  primaryButtonText: { color: colors.textPrimary, fontFamily: 'Inter_700Bold', fontSize: 15 },
   disabledButton: { opacity: 0.6 },
 })

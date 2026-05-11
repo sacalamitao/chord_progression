@@ -10,5 +10,11 @@ export const colors = {
   accent: '#1DB954',
   danger: '#F15E6C',
   shadow: '#000000',
+  navSurface: '#121322',
+  navBorder: '#2A2D45',
+  navActive: '#8B5CF6',
+  navText: '#D2D5E8',
+  navTextInactive: '#7F849F',
+  navIcon: '#D2D5E8',
+  navIconInactive: '#8A8FAA',
 } as const
-

@@ -1,27 +1,17 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { colors } from '../theme/colors'
 
-export type BottomNavigationTab = 'keys' | 'songs' | 'events'
+export type BottomNavigationTab = 'home' | 'events' | 'songs' | 'keys'
 
 type BottomNavigationItem = {
   key: BottomNavigationTab
   label: string
+  icon: 'home-outline' | 'calendar-blank-outline' | 'music-note-outline' | 'piano'
+  activeIcon: 'home' | 'calendar-blank' | 'music-note' | 'piano'
 }
 
-type IoniconNavigationItem = BottomNavigationItem & {
-  iconSet: 'ionicons'
-  icon: 'musical-notes-outline'
-  activeIcon: 'musical-notes'
-}
-
-type MaterialNavigationItem = BottomNavigationItem & {
-  iconSet: 'material'
-  icon: 'music-note-outline' | 'calendar-month-outline'
-  activeIcon: 'music-note' | 'calendar-month'
-}
-
-type NavigationItem = IoniconNavigationItem | MaterialNavigationItem
+type NavigationItem = BottomNavigationItem
 
 type BottomNavigationProps = {
   activeTab: BottomNavigationTab
@@ -29,18 +19,15 @@ type BottomNavigationProps = {
 }
 
 const navigationItems: NavigationItem[] = [
-  { key: 'keys', label: 'Keys', icon: 'musical-notes-outline', activeIcon: 'musical-notes', iconSet: 'ionicons' },
-  { key: 'songs', label: 'Songs', icon: 'music-note-outline', activeIcon: 'music-note', iconSet: 'material' },
-  { key: 'events', label: 'Events', icon: 'calendar-month-outline', activeIcon: 'calendar-month', iconSet: 'material' },
+  { key: 'home', label: 'Home', icon: 'home-outline', activeIcon: 'home' },
+  { key: 'events', label: 'Events', icon: 'calendar-blank-outline', activeIcon: 'calendar-blank' },
+  { key: 'songs', label: 'Songs', icon: 'music-note-outline', activeIcon: 'music-note' },
+  { key: 'keys', label: 'Keys', icon: 'piano', activeIcon: 'piano' },
 ]
 
 function NavigationIcon({ item, active }: { item: NavigationItem; active: boolean }) {
-  const color = active ? colors.accent : colors.textMuted
-  const size = active ? 24 : 23
-
-  if (item.iconSet === 'ionicons') {
-    return <Ionicons name={active ? item.activeIcon : item.icon} size={size} color={color} />
-  }
+  const color = active ? colors.navIcon : colors.navIconInactive
+  const size = 26
 
   return <MaterialCommunityIcons name={active ? item.activeIcon : item.icon} size={size} color={color} />
 }
@@ -72,10 +59,25 @@ export function BottomNavigation({ activeTab, onTabPress }: BottomNavigationProp
 }
 
 const styles = StyleSheet.create({
-  bottomNav: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 70, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingHorizontal: 28, paddingTop: 7, paddingBottom: 6 },
-  navItem: { width: 78, height: 56, alignItems: 'center', justifyContent: 'center' },
-  iconWrap: { width: 34, height: 30, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 3 },
-  activeIconWrap: { backgroundColor: colors.surfaceElevated },
-  navActiveLabel: { color: colors.textPrimary, fontSize: 10, lineHeight: 12, fontWeight: '900' },
-  navLabel: { color: colors.textMuted, fontSize: 10, lineHeight: 12, fontWeight: '700' },
+  bottomNav: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 78,
+    backgroundColor: colors.navSurface,
+    borderTopWidth: 1,
+    borderTopColor: colors.navBorder,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  navItem: { width: 72, height: 62, alignItems: 'center', justifyContent: 'center' },
+  iconWrap: { width: 36, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
+  activeIconWrap: { backgroundColor: 'transparent' },
+  navActiveLabel: { color: colors.navText, fontSize: 10, lineHeight: 12, fontWeight: '700' },
+  navLabel: { color: colors.navTextInactive, fontSize: 10, lineHeight: 12, fontWeight: '600' },
 })

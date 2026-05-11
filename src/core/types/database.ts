@@ -2,6 +2,7 @@ export type EventRecord = {
   id: number
   name: string
   scheduled_on: string | null
+  image_url: string | null
   created_at: string
   updated_at: string
 }

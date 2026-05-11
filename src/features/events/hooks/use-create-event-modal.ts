@@ -3,8 +3,8 @@ import { useCallback, useState } from 'react'
 import type { Event } from '../types'
 
 type UseCreateEventModalParams = {
-  createEvent: (name: string, scheduledOn?: string | null) => Promise<unknown>
-  updateEvent: (id: number, name: string, scheduledOn?: string | null) => Promise<unknown>
+  createEvent: (name: string, scheduledOn?: string | null, imageUrl?: string | null) => Promise<unknown>
+  updateEvent: (id: number, name: string, scheduledOn?: string | null, imageUrl?: string | null) => Promise<unknown>
   onCreated?: () => void
   onUpdated?: () => void
   onError?: (error: unknown) => void
@@ -15,11 +15,13 @@ export type EventFormMode = 'create' | 'edit'
 export type CreateEventFormValues = {
   name: string
   scheduledOn: Date | null
+  imageUrl: string
 }
 
 const initialValues: CreateEventFormValues = {
   name: '',
   scheduledOn: null,
+  imageUrl: '',
 }
 
 function toDateOnlyString(value: Date | null) {
@@ -64,6 +66,7 @@ export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpd
     setValues({
       name: event.name,
       scheduledOn: fromDateOnlyString(event.scheduled_on),
+      imageUrl: event.image_url ?? '',
     })
     setDatePickerVisible(false)
     setVisible(true)
@@ -110,9 +113,9 @@ export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpd
 
       if (mode === 'edit') {
         if (!editingEventId) throw new Error('Event id is required')
-        await updateEvent(editingEventId, trimmedName, scheduledOn)
+        await updateEvent(editingEventId, trimmedName, scheduledOn, values.imageUrl)
       } else {
-        await createEvent(trimmedName, scheduledOn)
+        await createEvent(trimmedName, scheduledOn, values.imageUrl)
       }
 
       setVisible(false)
@@ -127,7 +130,7 @@ export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpd
     } finally {
       setSubmitting(false)
     }
-  }, [createEvent, editingEventId, mode, onCreated, onError, onUpdated, updateEvent, values.name, values.scheduledOn])
+  }, [createEvent, editingEventId, mode, onCreated, onError, onUpdated, updateEvent, values.imageUrl, values.name, values.scheduledOn])
 
   return {
     visible,
