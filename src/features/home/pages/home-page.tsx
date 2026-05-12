@@ -249,11 +249,9 @@ export function HomePage() {
       <CreateEventModal
         visible={createEventModal.visible}
         mode={createEventModal.mode}
-        values={createEventModal.values}
+        form={createEventModal.form}
         datePickerVisible={createEventModal.datePickerVisible}
         submitting={createEventModal.submitting}
-        validationError={createEventModal.validationError}
-        onChangeField={createEventModal.updateField}
         onOpenDatePicker={createEventModal.openDatePicker}
         onCloseDatePicker={createEventModal.closeDatePicker}
         onSubmit={createEventModal.submit}
@@ -263,10 +261,8 @@ export function HomePage() {
       <CreateSongModal
         visible={createSongModal.visible}
         keys={keys}
-        values={createSongModal.values}
+        form={createSongModal.form}
         submitting={createSongModal.submitting}
-        validationError={createSongModal.validationError}
-        onChangeField={createSongModal.updateField}
         onSubmit={createSongModal.submit}
         onClose={createSongModal.close}
       />

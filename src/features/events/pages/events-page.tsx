@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react'
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors } from '../../../shared/theme/colors'
 import { CreateEventModal } from '../components/create-event-modal'
 import { EventCard, type EventCardViewModel } from '../components/event-card'
+import { EventSnapshotModal } from '../components/event-snapshot-modal'
 import { EventsFilterTabs, type EventsFilter } from '../components/events-filter-tabs'
 import { EventsHeader } from '../components/events-header'
 import { EventsSearchBar } from '../components/events-search-bar'
-import { EventDetailPage } from './event-detail-page'
 import { useCreateEventModal } from '../hooks/use-create-event-modal'
 import { useEvents } from '../hooks/use-events'
 import type { Event } from '../types'
@@ -37,6 +38,28 @@ function isUpcoming(value: string | null) {
   return date.getTime() >= today.getTime()
 }
 
+function toStartOfDay(value: Date) {
+  const normalized = new Date(value)
+  normalized.setHours(0, 0, 0, 0)
+  return normalized
+}
+
+function parseEventDate(value: string | null) {
+  if (!value) return null
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return null
+
+  return toStartOfDay(parsed)
+}
+
+function getEventBucket(value: string | null, today: Date): 'upcoming' | 'past' | 'undated' {
+  const date = parseEventDate(value)
+  if (!date) return 'undated'
+  if (date < today) return 'past'
+  return 'upcoming'
+}
+
 function formatDateLabel(value: string | null, index: number) {
   if (!value) return index === 0 ? 'Today' : 'Upcoming'
 
@@ -46,25 +69,24 @@ function formatDateLabel(value: string | null, index: number) {
   return date.toLocaleDateString('en-US', { weekday: 'short', day: 'numeric' })
 }
 
-function toEventCardViewModel(item: Event, index: number): EventCardViewModel {
-  const accentColors = ['#FF8A5B', '#7C83FF', '#38BDF8', '#34D399']
-
+function toEventCardViewModel(item: Event, index: number, songsCount: number): EventCardViewModel {
   return {
     id: String(item.id),
     title: item.name,
-    subtitle: 'Tap to review event details and schedule.',
+    subtitle: 'Main Sanctuary',
+    venue: 'Main Sanctuary',
     dateLabel: formatDateLabel(item.scheduled_on, index),
-    timeLabel: '9:00 AM',
-    accentColor: accentColors[index % accentColors.length],
+    timeLabel: '09:00 AM - 11:30 AM',
+    songsCount,
+    accentColor: '#2A1F57',
   }
 }
 
 export function EventsPage() {
-  const { events, loading, error, createEvent, updateEvent, deleteEvent } = useEvents()
+  const { events, eventSongCounts, loading, error, createEvent, updateEvent, deleteEvent } = useEvents()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<EventsFilter>('all')
-  const [activeActionsEventId, setActiveActionsEventId] = useState<string | null>(null)
-  const [openedEventId, setOpenedEventId] = useState<string | null>(null)
+  const [snapshotEventId, setSnapshotEventId] = useState<string | null>(null)
   const createEventModal = useCreateEventModal({
     createEvent,
     updateEvent,
@@ -74,39 +96,64 @@ export function EventsPage() {
     },
   })
 
-  const eventCards = useMemo(
-    () => {
-      if (events.length === 0) return fallbackEvents
-
-      const filteredEvents = events.filter((event) => {
-        if (selectedFilter === 'today') return isToday(event.scheduled_on)
-        if (selectedFilter === 'upcoming') return isUpcoming(event.scheduled_on)
-        return true
-      })
-
-      return filteredEvents.map((event, index) => ({ ...toEventCardViewModel(event, index), manageable: true }))
-    },
-    [events, selectedFilter]
-  )
+  const eventCards = useMemo(() => {
+    if (events.length === 0) return fallbackEvents
+    return events.map((event, index) => ({ ...toEventCardViewModel(event, index, eventSongCounts[event.id] ?? 0), manageable: true }))
+  }, [eventSongCounts, events])
 
   const eventsById = useMemo(() => new Map(events.map((event) => [String(event.id), event])), [events])
 
-  const filteredEventCards = useMemo(() => {
+  const searchedEventCards = useMemo(() => {
     const normalizedSearchTerm = searchTerm.trim().toLowerCase()
 
     if (!normalizedSearchTerm) return eventCards
 
     return eventCards.filter((item) => {
-      const searchableText = `${item.title} ${item.subtitle} ${item.dateLabel} ${item.timeLabel}`.toLowerCase()
-      return searchableText.includes(normalizedSearchTerm)
+      return item.title.toLowerCase().includes(normalizedSearchTerm)
     })
   }, [eventCards, searchTerm])
+
+  const filterCounts = useMemo(() => {
+    const today = toStartOfDay(new Date())
+    return searchedEventCards.reduce(
+      (acc, item) => {
+        const source = eventsById.get(item.id)
+        const bucket = getEventBucket(source?.scheduled_on ?? null, today)
+
+        acc.all += 1
+        if (bucket === 'upcoming' || bucket === 'undated') acc.upcoming += 1
+        if (bucket === 'past') acc.past += 1
+
+        return acc
+      },
+      { all: 0, upcoming: 0, past: 0 }
+    )
+  }, [eventsById, searchedEventCards])
+
+  const filteredEventCards = useMemo(() => {
+    const today = toStartOfDay(new Date())
+
+    if (selectedFilter === 'all') return searchedEventCards
+
+    if (selectedFilter === 'today') {
+      return searchedEventCards.filter((item) => {
+        const source = eventsById.get(item.id)
+        const bucket = getEventBucket(source?.scheduled_on ?? null, today)
+        return bucket === 'upcoming' || bucket === 'undated'
+      })
+    }
+
+    return searchedEventCards.filter((item) => {
+      const source = eventsById.get(item.id)
+      return getEventBucket(source?.scheduled_on ?? null, today) === 'past'
+    })
+  }, [eventsById, searchedEventCards, selectedFilter])
 
   const onEditEvent = (eventId: string) => {
     const event = eventsById.get(eventId)
     if (!event) return
 
-    setActiveActionsEventId(null)
+    setSnapshotEventId(null)
     createEventModal.openEdit(event)
   }
 
@@ -114,7 +161,7 @@ export function EventsPage() {
     const event = eventsById.get(eventId)
     if (!event) return
 
-    setActiveActionsEventId(null)
+    setSnapshotEventId(null)
     Alert.alert('Delete event?', `This will permanently delete "${event.name}".`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -130,24 +177,57 @@ export function EventsPage() {
     ])
   }
 
-  const capitalized = (str: string) =>
-    str.charAt(0).toUpperCase() + str.slice(1)
+  const snapshotEvent = snapshotEventId ? eventsById.get(snapshotEventId) ?? null : null
 
-  const openedEvent = openedEventId ? eventsById.get(openedEventId) ?? null : null
+  const groupedCards = useMemo(() => {
+    const today = toStartOfDay(new Date())
+    const next7End = new Date(today)
+    next7End.setDate(next7End.getDate() + 7)
 
-  if (openedEvent) {
-    return <EventDetailPage eventId={openedEvent.id} eventName={openedEvent.name} onBack={() => setOpenedEventId(null)} />
-  }
+    const next: EventCardViewModel[] = []
+    const later: EventCardViewModel[] = []
+    const done: EventCardViewModel[] = []
+
+    filteredEventCards.forEach((item) => {
+      const source = eventsById.get(item.id)
+      const date = parseEventDate(source?.scheduled_on ?? null)
+
+      if (!date) {
+        later.push(item)
+        return
+      }
+
+      if (date < today) {
+        done.push(item)
+        return
+      }
+
+      if (date <= next7End) {
+        next.push(item)
+        return
+      }
+
+      if (date.getMonth() === today.getMonth() && date.getFullYear() === today.getFullYear()) {
+        later.push(item)
+        return
+      }
+
+      later.push(item)
+    })
+
+    return [
+      { key: 'next', title: 'NEXT 7 DAYS', items: next },
+      { key: 'later', title: 'LATER THIS MONTH', items: later },
+      { key: 'done', title: 'RECENTLY COMPLETED', items: done },
+    ]
+  }, [eventsById, filteredEventCards])
 
   return (
     <View style={styles.screen}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <EventsHeader onCreatePress={createEventModal.open} creating={createEventModal.submitting} />
+        <EventsHeader />
         <EventsSearchBar value={searchTerm} onChangeText={setSearchTerm} onClear={() => setSearchTerm('')} />
-        <EventsFilterTabs selectedFilter={selectedFilter} onFilterChange={setSelectedFilter} />
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>{capitalized(selectedFilter)}</Text>
-        </View>
+        <EventsFilterTabs selectedFilter={selectedFilter} counts={filterCounts} onFilterChange={setSelectedFilter} />
 
         {loading ? (
           <View style={styles.loadingWrap}>
@@ -157,25 +237,28 @@ export function EventsPage() {
 
         {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-        <View style={styles.eventsList}>
-          {filteredEventCards.map((item) => (
-            <EventCard
-              key={item.id}
-              event={item}
-              onPress={() => setOpenedEventId(item.id)}
-              actionsVisible={activeActionsEventId === item.id}
-              onToggleActions={() => setActiveActionsEventId((currentId) => (currentId === item.id ? null : item.id))}
-              onCloseActions={() => setActiveActionsEventId(null)}
-              onEdit={() => onEditEvent(item.id)}
-              onDelete={() => onDeleteEvent(item.id)}
-            />
-          ))}
-        </View>
+        {groupedCards.map((group) => (
+          <View key={group.key} style={styles.groupBlock}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>{group.title}</Text>
+              <View style={styles.countPill}><Text style={styles.countPillText}>{group.items.length} Events</Text></View>
+            </View>
+            <View style={styles.eventsList}>
+              {group.items.map((item) => (
+                <EventCard
+                  key={item.id}
+                  event={item}
+                  onPress={() => setSnapshotEventId(item.id)}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
 
         {!loading && filteredEventCards.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyStateTitle}>No events found</Text>
-            <Text style={styles.emptyStateText}>Try searching by event name, date, or time.</Text>
+            <Text style={styles.emptyStateText}>Try searching by event name.</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -183,16 +266,40 @@ export function EventsPage() {
       <CreateEventModal
         visible={createEventModal.visible}
         mode={createEventModal.mode}
-        values={createEventModal.values}
+        form={createEventModal.form}
         datePickerVisible={createEventModal.datePickerVisible}
         submitting={createEventModal.submitting}
-        validationError={createEventModal.validationError}
-        onChangeField={createEventModal.updateField}
         onOpenDatePicker={createEventModal.openDatePicker}
         onCloseDatePicker={createEventModal.closeDatePicker}
         onSubmit={createEventModal.submit}
         onClose={createEventModal.close}
       />
+
+      <EventSnapshotModal
+        visible={Boolean(snapshotEvent)}
+        title={snapshotEvent?.name ?? ''}
+        venue="Main Sanctuary"
+        dateLabel={snapshotEvent?.scheduled_on ? new Date(snapshotEvent.scheduled_on).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date TBA'}
+        timeLabel="09:00 AM - 11:30 AM"
+        imageUrl={snapshotEvent?.image_url ?? null}
+        onClose={() => setSnapshotEventId(null)}
+        onAddSong={() => {
+          setSnapshotEventId(null)
+          Alert.alert('Coming soon', 'Add Song flow for event will be connected in the next screen.')
+        }}
+        onEdit={() => {
+          if (!snapshotEventId) return
+          onEditEvent(snapshotEventId)
+        }}
+        onDelete={() => {
+          if (!snapshotEventId) return
+          onDeleteEvent(snapshotEventId)
+        }}
+      />
+
+      <Pressable accessibilityRole="button" accessibilityLabel="Create event" style={styles.fab} onPress={createEventModal.open}>
+        <MaterialCommunityIcons name="plus" size={28} color="#1B1434" />
+      </Pressable>
     </View>
   )
 }
@@ -200,14 +307,17 @@ export function EventsPage() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1, backgroundColor: colors.background },
-  content: { paddingHorizontal: 22, paddingTop: 24, paddingBottom: 116 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 27, marginBottom: 15 },
-  sectionTitle: { color: colors.textPrimary, fontSize: 24, fontWeight: '900', letterSpacing: -0.6, lineHeight: 29 },
-  sectionAction: { color: colors.textSecondary, fontSize: 13, fontWeight: '800', lineHeight: 16 },
+  content: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 126 },
+  groupBlock: { marginTop: 16 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
+  sectionTitle: { color: '#A8AEC7', fontFamily: 'Inter_700Bold', fontSize: 12, lineHeight: 14 },
+  countPill: { borderRadius: 999, backgroundColor: '#24283C', borderWidth: 1, borderColor: '#2E3450', paddingHorizontal: 8, paddingVertical: 3 },
+  countPillText: { color: '#8991B3', fontFamily: 'Inter_600SemiBold', fontSize: 10 },
   loadingWrap: { paddingVertical: 14 },
   errorText: { color: colors.danger, fontSize: 13, fontWeight: '600', marginBottom: 12 },
-  eventsList: { gap: 18 },
+  eventsList: { gap: 10 },
   emptyState: { alignItems: 'center', borderRadius: 28, backgroundColor: colors.surface, marginTop: 14, paddingHorizontal: 20, paddingVertical: 28, borderWidth: 1, borderColor: colors.border },
   emptyStateTitle: { color: colors.textPrimary, fontSize: 17, fontWeight: '900', marginBottom: 6 },
   emptyStateText: { color: colors.textSecondary, fontSize: 13, fontWeight: '600', textAlign: 'center' },
+  fab: { position: 'absolute', right: 22, bottom: 96, width: 56, height: 56, borderRadius: 28, backgroundColor: '#8F6BFF', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#1A1633', shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 10, zIndex: 20 },
 })

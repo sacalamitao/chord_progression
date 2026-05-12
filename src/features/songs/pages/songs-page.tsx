@@ -25,10 +25,8 @@ export function SongsPage() {
       <CreateSongModal
         visible={createSongModal.visible}
         keys={keys}
-        values={createSongModal.values}
+        form={createSongModal.form}
         submitting={createSongModal.submitting}
-        validationError={createSongModal.validationError}
-        onChangeField={createSongModal.updateField}
         onSubmit={createSongModal.submit}
         onClose={createSongModal.close}
       />

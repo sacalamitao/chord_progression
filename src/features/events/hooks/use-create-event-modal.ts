@@ -1,10 +1,13 @@
 import { useCallback, useState } from 'react'
+import { useEventForm } from '../forms/use-event-form'
+import type { EventFormValues } from '../forms/event-form.schema'
+import type { CreateEventPayload, UpdateEventPayload } from './use-events'
 
 import type { Event } from '../types'
 
 type UseCreateEventModalParams = {
-  createEvent: (name: string, scheduledOn?: string | null, imageUrl?: string | null) => Promise<unknown>
-  updateEvent: (id: number, name: string, scheduledOn?: string | null, imageUrl?: string | null) => Promise<unknown>
+  createEvent: (payload: CreateEventPayload) => Promise<unknown>
+  updateEvent: (id: number, payload: UpdateEventPayload) => Promise<unknown>
   onCreated?: () => void
   onUpdated?: () => void
   onError?: (error: unknown) => void
@@ -12,17 +15,7 @@ type UseCreateEventModalParams = {
 
 export type EventFormMode = 'create' | 'edit'
 
-export type CreateEventFormValues = {
-  name: string
-  scheduledOn: Date | null
-  imageUrl: string
-}
-
-const initialValues: CreateEventFormValues = {
-  name: '',
-  scheduledOn: null,
-  imageUrl: '',
-}
+const initialValues: EventFormValues = { name: '', scheduledOn: null, imageUrl: '' }
 
 function toDateOnlyString(value: Date | null) {
   if (!value) return null
@@ -44,34 +37,31 @@ function fromDateOnlyString(value: string | null) {
 }
 
 export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpdated, onError }: UseCreateEventModalParams) {
+  const form = useEventForm(initialValues)
   const [visible, setVisible] = useState(false)
   const [mode, setMode] = useState<EventFormMode>('create')
   const [editingEventId, setEditingEventId] = useState<number | null>(null)
-  const [values, setValues] = useState<CreateEventFormValues>(initialValues)
   const [datePickerVisible, setDatePickerVisible] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
 
   const open = useCallback(() => {
     setMode('create')
     setEditingEventId(null)
-    setValues(initialValues)
+    form.reset(initialValues)
     setVisible(true)
-    setValidationError(null)
-  }, [])
+  }, [form])
 
   const openEdit = useCallback((event: Event) => {
     setMode('edit')
     setEditingEventId(event.id)
-    setValues({
+    form.reset({
       name: event.name,
       scheduledOn: fromDateOnlyString(event.scheduled_on),
       imageUrl: event.image_url ?? '',
     })
     setDatePickerVisible(false)
     setVisible(true)
-    setValidationError(null)
-  }, [])
+  }, [form])
 
   const close = useCallback(() => {
     if (submitting) return
@@ -80,9 +70,8 @@ export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpd
     setDatePickerVisible(false)
     setMode('create')
     setEditingEventId(null)
-    setValues(initialValues)
-    setValidationError(null)
-  }, [submitting])
+    form.reset(initialValues)
+  }, [form, submitting])
 
   const openDatePicker = useCallback(() => {
     if (submitting) return
@@ -93,36 +82,32 @@ export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpd
     setDatePickerVisible(false)
   }, [])
 
-  const updateField = useCallback(<Field extends keyof CreateEventFormValues>(field: Field, value: CreateEventFormValues[Field]) => {
-    setValues((currentValues) => ({ ...currentValues, [field]: value }))
-    if (validationError) setValidationError(null)
-  }, [validationError])
-
   const submit = useCallback(async () => {
-    const trimmedName = values.name.trim()
+    const isValid = await form.trigger()
+    if (!isValid) return
 
-    if (!trimmedName) {
-      setValidationError('Event name is required.')
-      return
+    const values = form.getValues()
+    const payload: CreateEventPayload = {
+      name: values.name,
+      scheduledOn: toDateOnlyString(values.scheduledOn),
+      imageUrl: values.imageUrl,
     }
 
     try {
       setSubmitting(true)
-      setValidationError(null)
-      const scheduledOn = toDateOnlyString(values.scheduledOn)
 
       if (mode === 'edit') {
         if (!editingEventId) throw new Error('Event id is required')
-        await updateEvent(editingEventId, trimmedName, scheduledOn, values.imageUrl)
+        await updateEvent(editingEventId, payload)
       } else {
-        await createEvent(trimmedName, scheduledOn, values.imageUrl)
+        await createEvent(payload)
       }
 
       setVisible(false)
       setDatePickerVisible(false)
       setMode('create')
       setEditingEventId(null)
-      setValues(initialValues)
+      form.reset(initialValues)
       if (mode === 'edit') onUpdated?.()
       else onCreated?.()
     } catch (error) {
@@ -130,21 +115,19 @@ export function useCreateEventModal({ createEvent, updateEvent, onCreated, onUpd
     } finally {
       setSubmitting(false)
     }
-  }, [createEvent, editingEventId, mode, onCreated, onError, onUpdated, updateEvent, values.imageUrl, values.name, values.scheduledOn])
+  }, [createEvent, editingEventId, form, mode, onCreated, onError, onUpdated, updateEvent])
 
   return {
+    form,
     visible,
     mode,
-    values,
     datePickerVisible,
     submitting,
-    validationError,
     open,
     openEdit,
     close,
     openDatePicker,
     closeDatePicker,
-    updateField,
     submit,
   }
 }

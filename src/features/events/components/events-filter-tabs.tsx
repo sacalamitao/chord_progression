@@ -10,16 +10,21 @@ type EventsFilterOption = {
 
 type EventsFilterTabsProps = {
   selectedFilter: EventsFilter
+  counts: {
+    all: number
+    upcoming: number
+    past: number
+  }
   onFilterChange: (filter: EventsFilter) => void
 }
 
-const filterOptions: EventsFilterOption[] = [
-  { value: 'all', label: 'All' },
-  { value: 'today', label: 'Today' },
-  { value: 'upcoming', label: 'Upcoming' },
-]
+export function EventsFilterTabs({ selectedFilter, counts, onFilterChange }: EventsFilterTabsProps) {
+  const filterOptions: EventsFilterOption[] = [
+    { value: 'all', label: `All: ${counts.all}` },
+    { value: 'today', label: `Upcoming: ${counts.upcoming}` },
+    { value: 'upcoming', label: `Past: ${counts.past}` },
+  ]
 
-export function EventsFilterTabs({ selectedFilter, onFilterChange }: EventsFilterTabsProps) {
   return (
     <View style={styles.container}>
       {filterOptions.map((option) => {
@@ -43,9 +48,9 @@ export function EventsFilterTabs({ selectedFilter, onFilterChange }: EventsFilte
 }
 
 const styles = StyleSheet.create({
-  container: { height: 58, borderRadius: 22, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 18, padding: 7, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 18, elevation: 2 },
-  tab: { flex: 1, height: 44, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  activeTab: { backgroundColor: colors.surfaceElevated, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 7 }, shadowOpacity: 0.2, shadowRadius: 13, elevation: 3 },
-  tabText: { color: colors.textSecondary, fontSize: 14, fontWeight: '800' },
-  activeTabText: { color: colors.textPrimary },
+  container: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 },
+  tab: { height: 24, borderRadius: 12, paddingHorizontal: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: '#24283C', borderWidth: 1, borderColor: '#2F334D' },
+  activeTab: { backgroundColor: '#4F3ED9', borderColor: '#6F62E8' },
+  tabText: { color: '#A9AEC3', fontFamily: 'Inter_700Bold', fontSize: 11, lineHeight: 14 },
+  activeTabText: { color: '#ECEAFF' },
 })

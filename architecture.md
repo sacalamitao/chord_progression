@@ -28,17 +28,26 @@ This document defines a scalable, maintainable mobile frontend architecture usin
 
 ## 3. High-Level Architecture
 
-The application follows a layered architecture:
+The application follows a layered architecture with a formal validation boundary:
 
 UI (Screens / Components)
 ↓
-Hooks (Logic Layer)
+Form Layer (React Hook Form + Zod)
+↓
+Hooks / Mutations (Orchestration Layer)
 ↓
 API Layer (HTTP calls)
 ↓
 Core (Infrastructure)
 ↓
 Backend (Rails API)
+
+### Why this matters
+
+- Validation schemas belong to the **feature boundary**, not inside UI components or random hooks.
+- Forms own form-state concerns (field state, dirty state, validation errors).
+- Hooks own orchestration concerns (modal lifecycle, mutation flow, side effects).
+- APIs accept typed payload objects (DTOs), not positional arguments.
 
 ---
 
@@ -228,9 +237,38 @@ features/
   auth/
     components/
     screens/
+    forms/
     hooks/
+    schemas/
     api.ts
     types.ts
+```
+
+### Recommended feature structure for scalable form-heavy modules
+
+```txt
+features/
+  events/
+    api/
+      createEvent.ts
+      updateEvent.ts
+
+    components/
+      EventForm.tsx
+      EventModal.tsx
+
+    forms/
+      eventForm.schema.ts
+      useEventForm.ts
+
+    hooks/
+      useCreateEventModal.ts
+
+    schemas/
+      eventResponse.schema.ts
+
+    types/
+      event.ts
 ```
 
 ### Example API
@@ -238,8 +276,33 @@ features/
 ```ts
 import api from '@/core/api/client'
 
-export const login = (data: { email: string; password: string }) =>
-  api.post('/login', data)
+type LoginPayload = {
+  email: string
+  password: string
+}
+
+export const login = (payload: LoginPayload) => api.post('/login', payload)
+```
+
+### DTO-first API design (recommended)
+
+Prefer this:
+
+```ts
+type CreateEventPayload = {
+  name: string
+  scheduledOn?: string | null
+  imageUrl?: string | null
+}
+
+export const createEvent = (payload: CreateEventPayload) =>
+  api.post('/events', payload)
+```
+
+Avoid this:
+
+```ts
+createEvent(name, scheduledOn, imageUrl)
 ```
 
 ### Example Hook
@@ -347,11 +410,109 @@ Use this when:
 
 ## 12. Data Flow
 
-Screen → Hook → API → Core → Backend
+Screen/Modal → Form Layer (RHF + Zod) → Hook/Mutation → API → Core → Backend
 
 ---
 
-## 13. Mobile-Specific Considerations
+## 13. Form & Validation Strategy
+
+### Principles
+
+- Use **React Hook Form** for form state management.
+- Use **Zod** for validation, DTO parsing, and runtime contract enforcement.
+- Keep schemas inside the feature that owns them (`features/<feature>/forms` or `features/<feature>/schemas`).
+- Do **not** create a broad `shared/schemas/` folder too early.
+
+### Senior form architecture pattern
+
+```txt
+schema.ts
+↓
+form hook
+↓
+presentational form component
+↓
+screen/modal
+```
+
+### Example form schema
+
+```ts
+import { z } from 'zod'
+
+export const eventFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Event name is required')
+    .max(100, 'Event name is too long'),
+  scheduledOn: z.date().nullable(),
+  imageUrl: z.string().trim().url('Must be a valid URL').optional().or(z.literal('')),
+})
+
+export type EventFormValues = z.infer<typeof eventFormSchema>
+```
+
+### Example form hook
+
+```ts
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { eventFormSchema, type EventFormValues } from './eventForm.schema'
+
+export function useEventForm(initialValues?: Partial<EventFormValues>) {
+  return useForm<EventFormValues>({
+    resolver: zodResolver(eventFormSchema),
+    defaultValues: {
+      name: '',
+      scheduledOn: null,
+      imageUrl: '',
+      ...initialValues,
+    },
+  })
+}
+```
+
+### Hook responsibilities after introducing form layer
+
+`useCreateEventModal` should focus on:
+
+- visible
+- mode
+- editing id
+- submit orchestration
+- modal lifecycle
+
+It should **not** own:
+
+- field state
+- validation rules
+- error mapping
+- dirty tracking
+
+### Zod beyond forms
+
+Zod is not only form validation. Use it for:
+
+- runtime validation
+- API contract validation
+- DTO parsing
+- boundary transformations
+
+Example:
+
+```ts
+const eventResponseSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+})
+
+const parsed = eventResponseSchema.parse(response.data)
+```
+
+---
+
+## 14. Mobile-Specific Considerations
 
 1. **Navigation replaces routing**
    - No traditional URLs (except deep linking)
@@ -371,7 +532,7 @@ Screen → Hook → API → Core → Backend
 
 ---
 
-## 14. Key Principles (Unchanged)
+## 15. Key Principles (Unchanged)
 
 - Separation of concerns
 - Feature isolation
@@ -397,7 +558,7 @@ Your structure avoids that trap.
 
 ## 16. Optional Enhancements
 
-- Add form management (React Hook Form)
+- Add form management (React Hook Form + Zod)
 - Add a design system inside `shared/components`
 - Add global error boundary strategy
 - Add offline-first support and cache hydration
@@ -413,3 +574,4 @@ This adaptation preserves the strengths of your web architecture while making it
 - Secure for token handling
 - Navigation-aware
 - Scalable for long-term development
+- Explicit at boundaries (validation + DTO contracts)

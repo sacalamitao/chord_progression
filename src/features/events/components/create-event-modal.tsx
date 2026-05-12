@@ -1,17 +1,17 @@
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker'
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { colors } from '../../../shared/theme/colors'
-import type { CreateEventFormValues, EventFormMode } from '../hooks/use-create-event-modal'
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import type { EventFormMode } from '../hooks/use-create-event-modal'
+import { MaterialCommunityIcons } from '@expo/vector-icons'
+import type { UseFormReturn } from 'react-hook-form'
+import type { EventFormValues } from '../forms/event-form.schema'
 
 type CreateEventModalProps = {
   visible: boolean
   mode: EventFormMode
-  values: CreateEventFormValues
+  form: UseFormReturn<EventFormValues>
   datePickerVisible: boolean
   submitting: boolean
-  validationError: string | null
-  onChangeField: <Field extends keyof CreateEventFormValues>(field: Field, value: CreateEventFormValues[Field]) => void
   onOpenDatePicker: () => void
   onCloseDatePicker: () => void
   onSubmit: () => void
@@ -29,14 +29,19 @@ function formatSelectedDate(value: Date | null) {
   })
 }
 
-export function CreateEventModal({ visible, mode, values, datePickerVisible, submitting, validationError, onChangeField, onOpenDatePicker, onCloseDatePicker, onSubmit, onClose }: CreateEventModalProps) {
+export function CreateEventModal({ visible, mode, form, datePickerVisible, submitting, onOpenDatePicker, onCloseDatePicker, onSubmit, onClose }: CreateEventModalProps) {
+  const values = form.watch()
+  const nameError = form.formState.errors.name?.message
+  const imageUrlError = form.formState.errors.imageUrl?.message
   const pickerValue = values.scheduledOn ?? new Date()
   const isEditing = mode === 'edit'
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') onCloseDatePicker()
     if (event.type === 'dismissed') return
-    if (selectedDate) onChangeField('scheduledOn', selectedDate)
+    if (selectedDate) {
+      form.setValue('scheduledOn', selectedDate, { shouldDirty: true, shouldValidate: true })
+    }
   }
 
   return (
@@ -61,13 +66,14 @@ export function CreateEventModal({ visible, mode, values, datePickerVisible, sub
               accessibilityLabel="Event name"
               autoCapitalize="words"
               editable={!submitting}
-              onChangeText={(value) => onChangeField('name', value)}
+              onChangeText={(value) => form.setValue('name', value, { shouldDirty: true, shouldValidate: true })}
               placeholder="Sunday Worship Night"
               placeholderTextColor={colors.textMuted}
               returnKeyType="next"
               style={styles.input}
               value={values.name}
             />
+            {nameError ? <Text style={styles.errorText}>{nameError}</Text> : null}
           </View>
 
           <View style={styles.formGroup}>
@@ -102,17 +108,16 @@ export function CreateEventModal({ visible, mode, values, datePickerVisible, sub
               autoCorrect={false}
               editable={!submitting}
               keyboardType="url"
-              onChangeText={(value) => onChangeField('imageUrl', value)}
+              onChangeText={(value) => form.setValue('imageUrl', value, { shouldDirty: true, shouldValidate: true })}
               placeholder="https://example.com/event-banner.jpg"
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               style={styles.input}
               value={values.imageUrl}
             />
+            {imageUrlError ? <Text style={styles.errorText}>{imageUrlError}</Text> : null}
             <Text style={styles.helperText}>Optional. Add a public image URL for Home hero card display.</Text>
           </View>
-
-          {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
 
           <View style={styles.actionsRow}>
             <Pressable accessibilityRole="button" style={[styles.secondaryButton, submitting && styles.disabledButton]} onPress={onClose} disabled={submitting}>

@@ -1,78 +1,58 @@
 import { useCallback, useState } from 'react'
+import { useSongForm } from '../forms/use-song-form'
+import type { SongFormValues } from '../forms/song-form.schema'
+import type { CreateSongPayload } from './use-songs'
 
 type UseCreateSongModalParams = {
-  createSong: (title: string, defaultKeyId: number | null) => Promise<unknown>
+  createSong: (payload: CreateSongPayload) => Promise<unknown>
   onCreated?: () => void
   onError?: (error: unknown) => void
 }
 
-export type CreateSongFormValues = {
-  title: string
-  defaultKeyId: number | null
-}
-
-const initialValues: CreateSongFormValues = {
-  title: '',
-  defaultKeyId: null,
-}
+const initialValues: SongFormValues = { title: '', defaultKeyId: null }
 
 export function useCreateSongModal({ createSong, onCreated, onError }: UseCreateSongModalParams) {
+  const form = useSongForm(initialValues)
   const [visible, setVisible] = useState(false)
-  const [values, setValues] = useState<CreateSongFormValues>(initialValues)
   const [submitting, setSubmitting] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
 
   const open = useCallback(() => {
-    setValues(initialValues)
-    setValidationError(null)
+    form.reset(initialValues)
     setVisible(true)
-  }, [])
+  }, [form])
 
   const close = useCallback(() => {
     if (submitting) return
     setVisible(false)
-    setValues(initialValues)
-    setValidationError(null)
-  }, [submitting])
-
-  const updateField = useCallback(
-    <Field extends keyof CreateSongFormValues>(field: Field, value: CreateSongFormValues[Field]) => {
-      setValues((currentValues) => ({ ...currentValues, [field]: value }))
-      if (validationError) setValidationError(null)
-    },
-    [validationError]
-  )
+    form.reset(initialValues)
+  }, [form, submitting])
 
   const submit = useCallback(async () => {
-    const trimmed = values.title.trim()
+    const isValid = await form.trigger()
+    if (!isValid) return
 
-    if (!trimmed) {
-      setValidationError('Song title is required.')
-      return
-    }
+    const values = form.getValues()
+    const payload: CreateSongPayload = { title: values.title, defaultKeyId: values.defaultKeyId }
 
     try {
       setSubmitting(true)
-      setValidationError(null)
-      await createSong(trimmed, values.defaultKeyId)
+      await createSong(payload)
       setVisible(false)
-      setValues(initialValues)
+      form.reset(initialValues)
       onCreated?.()
     } catch (error) {
       onError?.(error)
     } finally {
       setSubmitting(false)
     }
-  }, [createSong, onCreated, onError, values.defaultKeyId, values.title])
+  }, [createSong, form, onCreated, onError])
 
   return {
+    form,
     visible,
-    values,
     submitting,
-    validationError,
     open,
     close,
-    updateField,
     submit,
   }
 }

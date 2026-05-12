@@ -2,6 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { songsApi } from '../api'
 import type { Song } from '../types'
 
+export type CreateSongPayload = {
+  title: string
+  defaultKeyId: number | null
+}
+
 export function useSongs() {
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,11 +27,11 @@ export function useSongs() {
     }
   }, [])
 
-  const createSong = useCallback(async (title: string, defaultKeyId: number | null) => {
-    const trimmed = title.trim()
+  const createSong = useCallback(async (payload: CreateSongPayload) => {
+    const trimmed = payload.title.trim()
     if (!trimmed) throw new Error('Song title is required')
 
-    const created = await songsApi.create({ title: trimmed, default_key_id: defaultKeyId })
+    const created = await songsApi.create({ title: trimmed, default_key_id: payload.defaultKeyId })
     setSongs((prev) => [created, ...prev])
     return created
   }, [])

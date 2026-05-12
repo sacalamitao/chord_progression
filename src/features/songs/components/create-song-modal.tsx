@@ -1,20 +1,22 @@
 import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { colors } from '../../../shared/theme/colors'
-import type { CreateSongFormValues } from '../hooks/use-create-song-modal'
 import type { Key } from '../../keys/types'
+import type { UseFormReturn } from 'react-hook-form'
+import type { SongFormValues } from '../forms/song-form.schema'
 
 type CreateSongModalProps = {
   visible: boolean
   keys: Key[]
-  values: CreateSongFormValues
+  form: UseFormReturn<SongFormValues>
   submitting: boolean
-  validationError: string | null
-  onChangeField: <Field extends keyof CreateSongFormValues>(field: Field, value: CreateSongFormValues[Field]) => void
   onSubmit: () => void
   onClose: () => void
 }
 
-export function CreateSongModal({ visible, keys, values, submitting, validationError, onChangeField, onSubmit, onClose }: CreateSongModalProps) {
+export function CreateSongModal({ visible, keys, form, submitting, onSubmit, onClose }: CreateSongModalProps) {
+  const values = form.watch()
+  const titleError = form.formState.errors.title?.message
+
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
@@ -37,13 +39,14 @@ export function CreateSongModal({ visible, keys, values, submitting, validationE
               accessibilityLabel="Song title"
               autoCapitalize="words"
               editable={!submitting}
-              onChangeText={(value) => onChangeField('title', value)}
+              onChangeText={(value) => form.setValue('title', value, { shouldDirty: true, shouldValidate: true })}
               placeholder="Goodness of God"
               placeholderTextColor={colors.textMuted}
               returnKeyType="done"
               style={styles.input}
               value={values.title}
             />
+            {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
             <Text style={styles.helperText}>Add a title now. Progressions and key mapping can be added later.</Text>
           </View>
 
@@ -59,7 +62,7 @@ export function CreateSongModal({ visible, keys, values, submitting, validationE
                     accessibilityRole="button"
                     accessibilityState={{ selected }}
                     style={[styles.keyChoiceChip, selected && styles.keyChoiceChipSelected]}
-                    onPress={() => onChangeField('defaultKeyId', key.id)}
+                    onPress={() => form.setValue('defaultKeyId', key.id, { shouldDirty: true, shouldValidate: true })}
                     disabled={submitting}
                   >
                     <Text style={[styles.keyChoiceText, selected && styles.keyChoiceTextSelected]}>{key.name}</Text>
@@ -70,7 +73,7 @@ export function CreateSongModal({ visible, keys, values, submitting, validationE
                 accessibilityRole="button"
                 accessibilityState={{ selected: values.defaultKeyId === null }}
                 style={[styles.keyChoiceChip, values.defaultKeyId === null && styles.keyChoiceChipSelected]}
-                onPress={() => onChangeField('defaultKeyId', null)}
+                onPress={() => form.setValue('defaultKeyId', null, { shouldDirty: true, shouldValidate: true })}
                 disabled={submitting}
               >
                 <Text style={[styles.keyChoiceText, values.defaultKeyId === null && styles.keyChoiceTextSelected]}>None</Text>
@@ -78,9 +81,6 @@ export function CreateSongModal({ visible, keys, values, submitting, validationE
             </View>
             <Text style={styles.helperText}>Optional. Select a key from existing key mappings.</Text>
           </View>
-
-          {validationError ? <Text style={styles.errorText}>{validationError}</Text> : null}
-
           <View style={styles.actionsRow}>
             <Pressable accessibilityRole="button" style={[styles.secondaryButton, submitting && styles.disabledButton]} onPress={onClose} disabled={submitting}>
               <Text style={styles.secondaryButtonText}>Cancel</Text>

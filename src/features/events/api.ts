@@ -55,6 +55,18 @@ export const eventsApi = {
     if (error) throw error
   },
 
+  async listSongCounts(): Promise<Record<number, number>> {
+    const { data, error } = await supabase.from('event_songs').select('event_id')
+
+    if (error) throw error
+
+    return (data ?? []).reduce<Record<number, number>>((acc, row) => {
+      const eventId = row.event_id
+      acc[eventId] = (acc[eventId] ?? 0) + 1
+      return acc
+    }, {})
+  },
+
   async getSetlist(eventId: number): Promise<EventSetlistRow[]> {
     const { data, error } = await supabase
       .from('event_songs')
