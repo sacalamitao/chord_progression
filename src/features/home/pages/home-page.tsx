@@ -1,4 +1,4 @@
-import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View, Alert } from 'react-native'
+import { ActivityIndicator, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View, Alert } from 'react-native'
 import { useMemo } from 'react'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors } from '../../../shared/theme/colors'
@@ -23,7 +23,7 @@ function formatEventDate(value: string | null): string {
 }
 
 export function HomePage() {
-  const { events, createEvent, updateEvent } = useEvents()
+  const { events, loading: eventsLoading, createEvent, updateEvent } = useEvents()
   const { songs, createSong } = useSongs()
   const { keys } = useKeys()
   const highlightEvent = useHomeHighlightEvent(events)
@@ -97,45 +97,52 @@ export function HomePage() {
       <Text style={styles.subtitle}>Welcome back,</Text>
       <Text style={styles.description}>Your setlist is ready for Sunday.</Text>
 
-      <ImageBackground
-        source={{
-          uri:
-            highlightEvent?.imageUrl ??
-            'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=1200&q=80',
-        }}
-        resizeMode="cover"
-        style={styles.heroCard}
-        imageStyle={styles.heroImage}
-      >
-        <View style={styles.heroOverlay}>
-          <View style={styles.heroTopRow}>
-            <View style={styles.badgePrimary}>
-              <Text style={styles.badgePrimaryText}>UPCOMING EVENT</Text>
-            </View>
-            <View style={styles.badgeDark}>
-              <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textPrimary} />
-              <Text style={styles.badgeDarkText}>{highlightEvent?.timingLabel ?? 'Upcoming'}</Text>
-            </View>
-          </View>
-
-          <Text style={styles.heroTitle}>{highlightEvent?.title ?? 'Sunday Morning\nCelebration'}</Text>
-
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <MaterialCommunityIcons name="calendar-blank-outline" size={16} color={colors.textPrimary} />
-              <Text style={styles.metaText}>{formatEventDate(highlightEvent?.scheduledOn ?? null)}, 09:00 AM</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <MaterialCommunityIcons name="map-marker-outline" size={16} color={colors.textPrimary} />
-              <Text style={styles.metaText}>Main Sanctuary</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <MaterialCommunityIcons name="music-note-outline" size={16} color={colors.textPrimary} />
-              <Text style={styles.metaText}>{highlightEventSongs.length} song{highlightEventSongs.length === 1 ? '' : 's'}</Text>
-            </View>
-          </View>
+      {eventsLoading ? (
+        <View style={[styles.heroCard, styles.heroLoadingCard]}>
+          <ActivityIndicator color={colors.textPrimary} />
+          <Text style={styles.heroLoadingText}>Loading event...</Text>
         </View>
-      </ImageBackground>
+      ) : (
+        <ImageBackground
+          source={{
+            uri:
+              highlightEvent?.imageUrl ??
+              'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=1200&q=80',
+          }}
+          resizeMode="cover"
+          style={styles.heroCard}
+          imageStyle={styles.heroImage}
+        >
+          <View style={styles.heroOverlay}>
+            <View style={styles.heroTopRow}>
+              <View style={styles.badgePrimary}>
+                <Text style={styles.badgePrimaryText}>UPCOMING EVENT</Text>
+              </View>
+              <View style={styles.badgeDark}>
+                <MaterialCommunityIcons name="clock-outline" size={14} color={colors.textPrimary} />
+                <Text style={styles.badgeDarkText}>{highlightEvent?.timingLabel ?? 'Upcoming'}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.heroTitle}>{highlightEvent?.title ?? 'Sunday Morning\nCelebration'}</Text>
+
+            <View style={styles.metaRow}>
+              <View style={styles.metaItem}>
+                <MaterialCommunityIcons name="calendar-blank-outline" size={16} color={colors.textPrimary} />
+                <Text style={styles.metaText}>{formatEventDate(highlightEvent?.scheduledOn ?? null)}, 09:00 AM</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <MaterialCommunityIcons name="map-marker-outline" size={16} color={colors.textPrimary} />
+                <Text style={styles.metaText}>Main Sanctuary</Text>
+              </View>
+              <View style={styles.metaItem}>
+                <MaterialCommunityIcons name="music-note-outline" size={16} color={colors.textPrimary} />
+                <Text style={styles.metaText}>{highlightEventSongs.length} song{highlightEventSongs.length === 1 ? '' : 's'}</Text>
+              </View>
+            </View>
+          </View>
+        </ImageBackground>
+      )}
 
       <View style={styles.quickActionsHeader}>
         <MaterialCommunityIcons name="lightning-bolt-outline" size={18} color={colors.textPrimary} />
@@ -167,10 +174,20 @@ export function HomePage() {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carouselTrack}>
           {topSongs.map((song) => (
-            <View key={song.id} style={styles.carouselCard}>
-              <Text style={styles.carouselCardTitle} numberOfLines={2}>{song.title}</Text>
-              <Text style={styles.carouselCardSubtitle}>Song</Text>
-            </View>
+            <ImageBackground
+              key={song.id}
+              source={{
+                uri: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=1200&q=80',
+              }}
+              resizeMode="cover"
+              style={styles.carouselCard}
+              imageStyle={styles.carouselCardImage}
+            >
+              <View style={styles.carouselCardOverlay}>
+                <Text style={styles.carouselCardTitle} numberOfLines={2}>{song.title}</Text>
+                <Text style={styles.carouselCardSubtitle}>{song.default_key_id ? `Key: ${keyById.get(song.default_key_id) ?? 'Unknown'}` : 'No default key'}</Text>
+              </View>
+            </ImageBackground>
           ))}
           {topSongs.length === 0 ? (
             <View style={styles.carouselCardEmpty}>
@@ -263,6 +280,7 @@ export function HomePage() {
         keys={keys}
         form={createSongModal.form}
         submitting={createSongModal.submitting}
+        enableProgressionFields={false}
         onSubmit={createSongModal.submit}
         onClose={createSongModal.close}
       />
@@ -326,6 +344,19 @@ const styles = StyleSheet.create({
     minHeight: 210,
     borderRadius: 20,
     overflow: 'hidden',
+  },
+  heroLoadingCard: {
+    backgroundColor: '#1B1F33',
+    borderWidth: 1,
+    borderColor: '#2A304A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  heroLoadingText: {
+    color: '#C9D0EC',
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 13,
   },
   heroImage: {
     borderRadius: 20,

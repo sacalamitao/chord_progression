@@ -9,7 +9,7 @@ type UseCreateSongModalParams = {
   onError?: (error: unknown) => void
 }
 
-const initialValues: SongFormValues = { title: '', defaultKeyId: null }
+const initialValues: SongFormValues = { title: '', defaultKeyId: null, numbering: '' }
 
 export function useCreateSongModal({ createSong, onCreated, onError }: UseCreateSongModalParams) {
   const form = useSongForm(initialValues)
@@ -32,7 +32,11 @@ export function useCreateSongModal({ createSong, onCreated, onError }: UseCreate
     if (!isValid) return
 
     const values = form.getValues()
-    const payload: CreateSongPayload = { title: values.title, defaultKeyId: values.defaultKeyId }
+    const payload: CreateSongPayload = {
+      title: values.title,
+      defaultKeyId: values.defaultKeyId,
+      numbering: values.numbering,
+    }
 
     try {
       setSubmitting(true)

@@ -1,4 +1,4 @@
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { colors } from '../../../shared/theme/colors'
 import type { Key } from '../../keys/types'
 import type { UseFormReturn } from 'react-hook-form'
@@ -9,20 +9,29 @@ type CreateSongModalProps = {
   keys: Key[]
   form: UseFormReturn<SongFormValues>
   submitting: boolean
+  enableProgressionFields?: boolean
   onSubmit: () => void
   onClose: () => void
 }
 
-export function CreateSongModal({ visible, keys, form, submitting, onSubmit, onClose }: CreateSongModalProps) {
+export function CreateSongModal({ visible, keys, form, submitting, enableProgressionFields = false, onSubmit, onClose }: CreateSongModalProps) {
   const values = form.watch()
   const titleError = form.formState.errors.title?.message
+  const numberingError = form.formState.errors.numbering?.message
 
   return (
     <Modal animationType="fade" transparent visible={visible} onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={Platform.OS === 'ios' ? 16 : 0} style={styles.overlay}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close create song modal" style={StyleSheet.absoluteFill} onPress={onClose} disabled={submitting} />
 
         <View style={styles.card}>
+          <ScrollView
+            style={styles.formScroll}
+            contentContainerStyle={styles.formScrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
           <View style={styles.headerRow}>
             <View>
               <Text style={styles.eyebrow}>New Song</Text>
@@ -47,7 +56,7 @@ export function CreateSongModal({ visible, keys, form, submitting, onSubmit, onC
               value={values.title}
             />
             {titleError ? <Text style={styles.errorText}>{titleError}</Text> : null}
-            <Text style={styles.helperText}>Add a title now. Progressions and key mapping can be added later.</Text>
+            <Text style={styles.helperText}>Add a title now. Key mapping can be added now or later.</Text>
           </View>
 
           <View style={styles.formGroup}>
@@ -81,6 +90,32 @@ export function CreateSongModal({ visible, keys, form, submitting, onSubmit, onC
             </View>
             <Text style={styles.helperText}>Optional. Select a key from existing key mappings.</Text>
           </View>
+
+          {enableProgressionFields ? (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Nashville Number System</Text>
+              <View style={styles.instructionsCard}>
+                <Text style={styles.instructionsTitle}>How to enter numbering</Text>
+                <Text style={styles.instructionsText}>Use scale degrees like 1, 4, 5, 6m and separate each chord with spaces.</Text>
+                <Text style={styles.instructionsText}>Use "|" to split measures. Example: 1 5 | 6m 4</Text>
+              </View>
+              <TextInput
+                accessibilityLabel="Song numbering"
+                editable={!submitting}
+                multiline
+                numberOfLines={4}
+                onChangeText={(value) => form.setValue('numbering', value, { shouldDirty: true, shouldValidate: true })}
+                placeholder="1 5 | 6m 4"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.input, styles.numberingInput]}
+                textAlignVertical="top"
+                value={values.numbering}
+              />
+              {numberingError ? <Text style={styles.errorText}>{numberingError}</Text> : null}
+              <Text style={styles.helperText}>Optional. This will be saved as the song's main progression.</Text>
+            </View>
+          ) : null}
+
           <View style={styles.actionsRow}>
             <Pressable accessibilityRole="button" style={[styles.secondaryButton, submitting && styles.disabledButton]} onPress={onClose} disabled={submitting}>
               <Text style={styles.secondaryButtonText}>Cancel</Text>
@@ -89,6 +124,7 @@ export function CreateSongModal({ visible, keys, form, submitting, onSubmit, onC
               {submitting ? <ActivityIndicator color={colors.textPrimary} /> : <Text style={styles.primaryButtonText}>Create</Text>}
             </Pressable>
           </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -97,7 +133,9 @@ export function CreateSongModal({ visible, keys, form, submitting, onSubmit, onC
 
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0, 0, 0, 0.65)' },
-  card: { borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.surface, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 34, shadowColor: colors.shadow, shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.28, shadowRadius: 24, elevation: 8 },
+  card: { maxHeight: '88%', borderTopLeftRadius: 32, borderTopRightRadius: 32, backgroundColor: colors.surface, borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border, paddingHorizontal: 22, paddingTop: 22, paddingBottom: 20, shadowColor: colors.shadow, shadowOffset: { width: 0, height: -10 }, shadowOpacity: 0.28, shadowRadius: 24, elevation: 8 },
+  formScroll: { flexGrow: 0 },
+  formScrollContent: { paddingBottom: 14 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24 },
   eyebrow: { color: colors.textSecondary, fontSize: 13, fontWeight: '800', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.8 },
   title: { color: colors.textPrimary, fontFamily: 'Inter_800ExtraBold', fontSize: 28, letterSpacing: -0.8 },
@@ -136,6 +174,18 @@ const styles = StyleSheet.create({
     color: '#ECE7FF',
   },
   helperText: { color: colors.textSecondary, fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17, marginTop: 8 },
+  instructionsCard: {
+    borderRadius: 14,
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+  },
+  instructionsTitle: { color: colors.textPrimary, fontFamily: 'Inter_700Bold', fontSize: 12, marginBottom: 4 },
+  instructionsText: { color: colors.textSecondary, fontFamily: 'Inter_500Medium', fontSize: 12, lineHeight: 17 },
+  numberingInput: { minHeight: 90 },
   errorText: { color: colors.danger, fontFamily: 'Inter_600SemiBold', fontSize: 13, marginTop: 2, marginBottom: 14 },
   actionsRow: { flexDirection: 'row', gap: 12, marginTop: 6 },
   secondaryButton: { flex: 1, minHeight: 52, borderRadius: 18, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },

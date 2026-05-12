@@ -10,6 +10,14 @@ export type CreateEventPayload = {
 
 export type UpdateEventPayload = CreateEventPayload
 
+export type AddSongsToEventPayload = {
+  eventId: number
+  items: Array<{
+    songId: number
+    keyId: number
+  }>
+}
+
 export function useEvents() {
   const [events, setEvents] = useState<Event[]>([])
   const [eventSongCounts, setEventSongCounts] = useState<Record<number, number>>({})
@@ -76,9 +84,23 @@ export function useEvents() {
     })
   }, [])
 
+  const addSongsToEvent = useCallback(async (payload: AddSongsToEventPayload) => {
+    if (payload.items.length === 0) return
+
+    await eventsApi.addSongsToEvent({
+      eventId: payload.eventId,
+      items: payload.items,
+    })
+
+    setEventSongCounts((prev) => ({
+      ...prev,
+      [payload.eventId]: (prev[payload.eventId] ?? 0) + payload.items.length,
+    }))
+  }, [])
+
   useEffect(() => {
     void loadEvents()
   }, [loadEvents])
 
-  return { events, eventSongCounts, loading, error, loadEvents, createEvent, updateEvent, deleteEvent }
+  return { events, eventSongCounts, loading, error, loadEvents, createEvent, updateEvent, deleteEvent, addSongsToEvent }
 }

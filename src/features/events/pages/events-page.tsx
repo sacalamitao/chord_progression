@@ -2,12 +2,16 @@ import { useMemo, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { MaterialCommunityIcons } from '@expo/vector-icons'
 import { colors } from '../../../shared/theme/colors'
+import { useKeys } from '../../keys/hooks/use-keys'
+import { AddSongsToEventModal } from '../components/add-songs-to-event-modal'
 import { CreateEventModal } from '../components/create-event-modal'
 import { EventCard, type EventCardViewModel } from '../components/event-card'
+import { EventDetailPage } from './event-detail-page'
 import { EventSnapshotModal } from '../components/event-snapshot-modal'
 import { EventsFilterTabs, type EventsFilter } from '../components/events-filter-tabs'
 import { EventsHeader } from '../components/events-header'
 import { EventsSearchBar } from '../components/events-search-bar'
+import { useAddSongsToEventModal } from '../hooks/use-add-songs-to-event-modal'
 import { useCreateEventModal } from '../hooks/use-create-event-modal'
 import { useEvents } from '../hooks/use-events'
 import type { Event } from '../types'
@@ -83,16 +87,54 @@ function toEventCardViewModel(item: Event, index: number, songsCount: number): E
 }
 
 export function EventsPage() {
-  const { events, eventSongCounts, loading, error, createEvent, updateEvent, deleteEvent } = useEvents()
+  const { events, eventSongCounts, loading, error, createEvent, updateEvent, deleteEvent, addSongsToEvent } = useEvents()
+  const { keys } = useKeys()
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<EventsFilter>('all')
   const [snapshotEventId, setSnapshotEventId] = useState<string | null>(null)
+  const [returnToSnapshotEventId, setReturnToSnapshotEventId] = useState<number | null>(null)
+  const [activeEventDetailId, setActiveEventDetailId] = useState<number | null>(null)
   const createEventModal = useCreateEventModal({
     createEvent,
     updateEvent,
+    onCreated: () => {
+      setReturnToSnapshotEventId(null)
+    },
+    onUpdated: () => {
+      setReturnToSnapshotEventId(null)
+    },
     onError: (err) => {
       console.error('Create event failed:', err)
       Alert.alert('Unable to create event', 'Please try again.')
+    },
+  })
+
+  const addSongsModal = useAddSongsToEventModal({
+    onSubmitSongs: async ({ eventId, songIds }) => {
+      if (keys.length === 0) {
+        throw new Error('Create at least one key first before adding songs to an event.')
+      }
+
+      const optionById = new Map(addSongsModal.options.map((item) => [item.id, item]))
+      const fallbackKeyId = keys[0].id
+
+      const items = songIds.map((songId) => {
+        const option = optionById.get(songId)
+        return {
+          songId,
+          keyId: option?.default_key_id ?? fallbackKeyId,
+        }
+      })
+
+      await addSongsToEvent({ eventId, items })
+    },
+    onClosed: (eventId) => {
+      if (!eventId) return
+      setSnapshotEventId(String(eventId))
+      setReturnToSnapshotEventId(null)
+    },
+    onSubmitted: () => {
+      setReturnToSnapshotEventId(null)
     },
   })
 
@@ -153,6 +195,7 @@ export function EventsPage() {
     const event = eventsById.get(eventId)
     if (!event) return
 
+    setReturnToSnapshotEventId(event.id)
     setSnapshotEventId(null)
     createEventModal.openEdit(event)
   }
@@ -162,6 +205,7 @@ export function EventsPage() {
     if (!event) return
 
     setSnapshotEventId(null)
+    setReturnToSnapshotEventId(null)
     Alert.alert('Delete event?', `This will permanently delete "${event.name}".`, [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -178,6 +222,19 @@ export function EventsPage() {
   }
 
   const snapshotEvent = snapshotEventId ? eventsById.get(snapshotEventId) ?? null : null
+  const activeEventDetail = activeEventDetailId ? events.find((event) => event.id === activeEventDetailId) ?? null : null
+
+  const handleCloseCreateEventModal = () => {
+    const editingEventId = returnToSnapshotEventId
+    const shouldReturnToSnapshot = createEventModal.mode === 'edit' && editingEventId !== null
+
+    createEventModal.close()
+
+    if (shouldReturnToSnapshot) {
+      setSnapshotEventId(String(editingEventId))
+      setReturnToSnapshotEventId(null)
+    }
+  }
 
   const groupedCards = useMemo(() => {
     const today = toStartOfDay(new Date())
@@ -221,6 +278,18 @@ export function EventsPage() {
       { key: 'done', title: 'RECENTLY COMPLETED', items: done },
     ]
   }, [eventsById, filteredEventCards])
+
+  if (activeEventDetail) {
+    return (
+      <EventDetailPage
+        eventId={activeEventDetail.id}
+        eventName={activeEventDetail.name}
+        eventDate={activeEventDetail.scheduled_on}
+        imageUrl={activeEventDetail.image_url}
+        onBack={() => setActiveEventDetailId(null)}
+      />
+    )
+  }
 
   return (
     <View style={styles.screen}>
@@ -272,7 +341,7 @@ export function EventsPage() {
         onOpenDatePicker={createEventModal.openDatePicker}
         onCloseDatePicker={createEventModal.closeDatePicker}
         onSubmit={createEventModal.submit}
-        onClose={createEventModal.close}
+        onClose={handleCloseCreateEventModal}
       />
 
       <EventSnapshotModal
@@ -283,9 +352,19 @@ export function EventsPage() {
         timeLabel="09:00 AM - 11:30 AM"
         imageUrl={snapshotEvent?.image_url ?? null}
         onClose={() => setSnapshotEventId(null)}
-        onAddSong={() => {
+        onEnterEvent={() => {
+          if (!snapshotEvent) return
           setSnapshotEventId(null)
-          Alert.alert('Coming soon', 'Add Song flow for event will be connected in the next screen.')
+          setReturnToSnapshotEventId(null)
+          setActiveEventDetailId(snapshotEvent.id)
+        }}
+        onAddSong={() => {
+          const eventId = snapshotEvent?.id ?? null
+          if (!eventId) return
+
+          setReturnToSnapshotEventId(eventId)
+          setSnapshotEventId(null)
+          void addSongsModal.open(eventId)
         }}
         onEdit={() => {
           if (!snapshotEventId) return
@@ -295,6 +374,24 @@ export function EventsPage() {
           if (!snapshotEventId) return
           onDeleteEvent(snapshotEventId)
         }}
+      />
+
+      <AddSongsToEventModal
+        visible={addSongsModal.visible}
+        options={addSongsModal.options}
+        selectedSet={addSongsModal.selectedSet}
+        selectedCount={addSongsModal.selectedCount}
+        loading={addSongsModal.loading}
+        submitting={addSongsModal.submitting}
+        error={addSongsModal.error}
+        onToggleSong={addSongsModal.toggleSong}
+        onSubmit={() => {
+          void addSongsModal.submit().catch((err) => {
+            console.error('Add songs to event failed:', err)
+            Alert.alert('Unable to add songs', err instanceof Error ? err.message : 'Please try again.')
+          })
+        }}
+        onClose={addSongsModal.close}
       />
 
       <Pressable accessibilityRole="button" accessibilityLabel="Create event" style={styles.fab} onPress={createEventModal.open}>

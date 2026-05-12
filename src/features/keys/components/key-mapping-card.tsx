@@ -47,14 +47,13 @@ export function KeyMappingCard({ item }: KeyMappingCardProps) {
 const styles = StyleSheet.create({
   card: { borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingTop: 12, paddingBottom: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  title: { color: colors.textPrimary, fontSize: 22, fontWeight: '800' },
-  more: { color: colors.textMuted, fontSize: 18, fontWeight: '700' },
+  title: { color: colors.textPrimary, fontFamily: 'Inter_800ExtraBold', fontSize: 22 },
+  more: { color: colors.textMuted, fontFamily: 'Inter_700Bold', fontSize: 18 },
   degreeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   degreeChip: { width: '23%', minHeight: 54, borderRadius: 10, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', paddingVertical: 7 },
-  degreeLabel: { color: colors.textMuted, fontSize: 10, fontWeight: '700' },
-  chordText: { color: colors.textPrimary, fontSize: 16, fontWeight: '800', marginTop: 2 },
+  degreeLabel: { color: colors.textMuted, fontFamily: 'Inter_700Bold', fontSize: 10 },
+  chordText: { color: colors.textPrimary, fontFamily: 'Inter_800ExtraBold', fontSize: 16, marginTop: 2 },
   footerRow: { marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  helperText: { color: colors.textMuted, fontSize: 11, fontWeight: '600' },
-  actionText: { color: colors.textSecondary, fontSize: 12, fontWeight: '700' },
+  helperText: { color: colors.textMuted, fontFamily: 'Inter_600SemiBold', fontSize: 11 },
+  actionText: { color: colors.textSecondary, fontFamily: 'Inter_700Bold', fontSize: 12 },
 })
-

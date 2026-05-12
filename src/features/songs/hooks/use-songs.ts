@@ -5,6 +5,7 @@ import type { Song } from '../types'
 export type CreateSongPayload = {
   title: string
   defaultKeyId: number | null
+  numbering?: string
 }
 
 export function useSongs() {
@@ -31,14 +32,40 @@ export function useSongs() {
     const trimmed = payload.title.trim()
     if (!trimmed) throw new Error('Song title is required')
 
-    const created = await songsApi.create({ title: trimmed, default_key_id: payload.defaultKeyId })
+    const numbering = payload.numbering?.trim() ?? ''
+
+    const created = await songsApi.create({
+      title: trimmed,
+      default_key_id: payload.defaultKeyId,
+      progressions: numbering ? { main: numbering } : {},
+    })
     setSongs((prev) => [created, ...prev])
     return created
+  }, [])
+
+  const updateSongDefaultKey = useCallback(async (payload: { songId: number; defaultKeyId: number | null }) => {
+    const updated = await songsApi.updateDefaultKey({
+      songId: payload.songId,
+      default_key_id: payload.defaultKeyId,
+    })
+
+    setSongs((prev) => prev.map((song) => (song.id === updated.id ? updated : song)))
+    return updated
+  }, [])
+
+  const updateSongProgression = useCallback(async (payload: { songId: number; progression: string }) => {
+    const updated = await songsApi.updateProgression({
+      songId: payload.songId,
+      progression: payload.progression,
+    })
+
+    setSongs((prev) => prev.map((song) => (song.id === updated.id ? updated : song)))
+    return updated
   }, [])
 
   useEffect(() => {
     void loadSongs()
   }, [loadSongs])
 
-  return { songs, loading, error, loadSongs, createSong }
+  return { songs, loading, error, loadSongs, createSong, updateSongDefaultKey, updateSongProgression }
 }

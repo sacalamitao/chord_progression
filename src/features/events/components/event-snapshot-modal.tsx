@@ -10,6 +10,7 @@ type EventSnapshotModalProps = {
   timeLabel: string
   imageUrl: string | null
   onClose: () => void
+  onEnterEvent: () => void
   onAddSong: () => void
   onEdit: () => void
   onDelete: () => void
@@ -17,7 +18,7 @@ type EventSnapshotModalProps = {
 
 const fallbackImage = 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=1200&q=80'
 
-export function EventSnapshotModal({ visible, title, venue, dateLabel, timeLabel, imageUrl, onClose, onAddSong, onEdit, onDelete }: EventSnapshotModalProps) {
+export function EventSnapshotModal({ visible, title, venue, dateLabel, timeLabel, imageUrl, onClose, onEnterEvent, onAddSong, onEdit, onDelete }: EventSnapshotModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -35,9 +36,14 @@ export function EventSnapshotModal({ visible, title, venue, dateLabel, timeLabel
           <View style={styles.body}>
             <View style={styles.titleRow}>
               <Text style={styles.title}>{title}</Text>
-              <Pressable accessibilityRole="button" accessibilityLabel="Delete event" style={styles.deleteIconButton} onPress={onDelete}>
-                <MaterialCommunityIcons name="trash-can-outline" size={18} color="#F67676" />
-              </Pressable>
+              <View style={styles.titleActions}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Edit event" style={styles.editIconButton} onPress={onEdit}>
+                  <MaterialCommunityIcons name="pencil-outline" size={16} color="#DCE3FF" />
+                </Pressable>
+                <Pressable accessibilityRole="button" accessibilityLabel="Delete event" style={styles.deleteIconButton} onPress={onDelete}>
+                  <MaterialCommunityIcons name="trash-can-outline" size={18} color="#F67676" />
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.metaRow}>
@@ -59,8 +65,8 @@ export function EventSnapshotModal({ visible, title, venue, dateLabel, timeLabel
               <Pressable style={styles.secondaryButton} onPress={onAddSong}>
                 <Text style={styles.secondaryButtonText}>Add Song</Text>
               </Pressable>
-              <Pressable style={styles.primaryButton} onPress={onEdit}>
-                <Text style={styles.primaryButtonText}>Edit</Text>
+              <Pressable style={styles.primaryButton} onPress={onEnterEvent}>
+                <Text style={styles.primaryButtonText}>Enter Event</Text>
               </Pressable>
             </View>
           </View>
@@ -79,7 +85,9 @@ const styles = StyleSheet.create({
   closeButton: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   body: { padding: 16 },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 },
+  titleActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { color: '#EEF1FF', fontFamily: 'Inter_700Bold', fontSize: 20, lineHeight: 24, marginBottom: 10 },
+  editIconButton: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(143,107,255,0.14)', borderWidth: 1, borderColor: 'rgba(143,107,255,0.45)' },
   deleteIconButton: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(246,118,118,0.1)', borderWidth: 1, borderColor: 'rgba(246,118,118,0.35)' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8 },
   metaText: { color: '#A4ABCA', fontFamily: 'Inter_500Medium', fontSize: 13 },

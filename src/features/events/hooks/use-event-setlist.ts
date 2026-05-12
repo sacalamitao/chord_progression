@@ -9,25 +9,21 @@ export type EventSetlistSection = {
 
 export type EventSetlistSong = {
   id: string
+  songId: number
   title: string
+  performanceKeyId: number
   performanceKey: string
   keyShortcut: string
   sections: EventSetlistSection[]
 }
 
-function parseNumericProgression(raw: string) {
-  return raw
-    .split('')
-    .filter((char) => /[1-8]/.test(char))
-}
-
 function translateNumericToChords(numeric: string, degreeChords: Record<string, string>) {
-  const tokens = parseNumericProgression(numeric)
-  if (tokens.length === 0) return numeric.trim()
+  const value = numeric ?? ''
+  if (!value.trim()) return ''
 
-  return tokens
-    .map((token) => degreeChords[token] ?? token)
-    .join(' ')
+  return value.replace(/\b([1-8])\b/g, (match, degree: string) => {
+    return degreeChords[degree] ?? match
+  })
 }
 
 function toSections(progressions: Record<string, string>, degreeChords: Record<string, string>) {
@@ -64,7 +60,9 @@ export function useEventSetlist(eventId: number | null) {
 
           return {
             id: String(row.id),
+            songId: song.id,
             title: song.title,
+            performanceKeyId: key.id,
             performanceKey: key.name,
             keyShortcut: key.name.split(' ')[0],
             sections: toSections(song.progressions ?? {}, key.degree_chords ?? {}),
@@ -80,10 +78,38 @@ export function useEventSetlist(eventId: number | null) {
     }
   }, [eventId])
 
+  const removeFromSetlist = useCallback(async (eventSongId: number) => {
+    await eventsApi.removeSongFromEvent({ eventSongId })
+    setSongs((prev) => prev.filter((song) => song.id !== String(eventSongId)))
+  }, [])
+
+  const updateSetlistSongKey = useCallback(
+    async (payload: { eventSongId: number; keyId: number; keyName: string; degreeChords: Record<string, string> }) => {
+      await eventsApi.updateEventSongKey({ eventSongId: payload.eventSongId, keyId: payload.keyId })
+
+      setSongs((prev) =>
+        prev.map((song) => {
+          if (song.id !== String(payload.eventSongId)) return song
+
+          return {
+            ...song,
+            performanceKeyId: payload.keyId,
+            performanceKey: payload.keyName,
+            keyShortcut: payload.keyName.split(' ')[0],
+            sections: song.sections.map((section) => ({
+              ...section,
+              progression: translateNumericToChords(section.numeric, payload.degreeChords),
+            })),
+          }
+        })
+      )
+    },
+    []
+  )
+
   useEffect(() => {
     void loadSetlist()
   }, [loadSetlist])
 
-  return { songs, loading, error, loadSetlist }
+  return { songs, loading, error, loadSetlist, removeFromSetlist, updateSetlistSongKey }
 }
-
